@@ -1,0 +1,47 @@
+version: '2'
+services:
+  web:
+    image: httpd
+    ports:
+      - 8080:80
+    links:
+      - fluentd
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async-connect: "false"
+        tag: httpd.access
+    depends_on:
+      - fluentd
+
+  fluentd:
+    build: ./fluentd
+    volumes:
+      - ./fluentd/conf:/fluentd/etc
+    links:
+      - elasticsearch
+    ports:
+      - 24224:24224
+      - 24224:24224/udp
+
+  elasticsearch:
+    image: elasticsearch:7.12.0
+    container_name: es-node
+    expose:
+      - 9200
+    ports:
+      - 9200:9200
+    environment:
+      - node.name=es-node
+      - cluster.name=es-cluster
+      - cluster.initial_master_nodes=es-node
+
+  kibana:
+    image: kibana:7.12.0
+    links:
+      - elasticsearch
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
